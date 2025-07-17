@@ -30,7 +30,8 @@ class Selector:
     while self.idx<len(papers_list):
       paper = papers_list[self.idx]
       self.print_paper(paper)
-      decision = self.handle_options(paper, selected_papers)
+      # decision = self.handle_options(paper, selected_papers)
+      decision = 'y'
       if decision=='e': # e will be exit
         print()
         break

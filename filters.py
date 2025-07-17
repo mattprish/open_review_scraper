@@ -73,6 +73,42 @@ def check_keywords_with_text(keywords, text, threshold):
   return None, False
 
 
+def extract_review_text(paper):
+  """Извлекает весь текст ревью из directReplies статьи"""
+  if not hasattr(paper, 'details') or not paper.details:
+    return ""
+    
+  direct_replies = paper.details.get('directReplies', [])
+  if not direct_replies:
+    return ""
+  
+  # Фильтруем только официальные ревью
+  reviews = []
+  for reply in direct_replies:
+    if (hasattr(reply, 'invitations') and 
+        any('Official_Review' in inv for inv in reply.invitations if inv)):
+      reviews.append(reply)
+  
+  if not reviews:
+    return ""
+  
+  # Собираем весь текст из ревью
+  all_review_text = []
+  for review in reviews:
+    content = getattr(review, 'content', {})
+    
+    # Извлекаем все текстовые поля ревью
+    review_fields = ['summary', 'strengths', 'weaknesses', 'questions', 'contribution']
+    for field in review_fields:
+      field_content = content.get(field, '')
+      if isinstance(field_content, dict) and 'value' in field_content:
+        field_content = field_content['value']
+      if field_content:
+        all_review_text.append(str(field_content))
+  
+  return " ".join(all_review_text)
+
+
 def satisfies_any_filters(paper, keywords, filters):
   for filter_, args, kwargs in filters:
     matched_keyword, matched = filter_(paper, keywords=keywords, *args, **kwargs)
@@ -100,4 +136,12 @@ def abstract_filter(paper, keywords, threshold=85):
   paper_abstract = paper.content.get('abstract')
   if paper_abstract is not None:
     return check_keywords_with_text(keywords, paper_abstract, threshold)
+  return None, False
+
+
+def reviews_filter(paper, keywords, threshold=85):
+  """Фильтр для поиска ключевых слов в тексте ревью"""
+  review_text = extract_review_text(paper)
+  if review_text:
+    return check_keywords_with_text(keywords, review_text, threshold)
   return None, False
